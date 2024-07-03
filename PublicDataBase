@@ -1,0 +1,63 @@
+//save data to cloudkit
+let publicDatabase = CKContainer(identifier: "iCloud.PublicCloudKit").publicCloudDatabase
+
+func saveImageToPublicCloudkit(image:UIImage){
+        
+        let record = CKRecord(recordType: "Image")
+        let imageData = image.jpegData(compressionQuality: 0.8)
+        let imageAsset = CKAsset(fileURL: createTemporaryFileURL(data:imageData!))
+        record["image"] = imageAsset
+        
+        publicDatabase.save(record){(record ,error) in
+            if let error = error {
+                print("Error saving image to cloudkit...")
+            }else {
+                print("Image saved succseefully!")
+            }
+        }
+        
+    }
+    
+    
+        
+    func createTemporaryFileURL(data:Data) -> URL {
+            
+            let tempDirectory = FileManager.default.temporaryDirectory
+            let tempFileURL = tempDirectory.appendingPathComponent(UUID().uuidString)
+            try? data.write(to: tempFileURL)
+            return tempFileURL
+            
+        }
+        
+}
+
+//fetch data from cloudkit 
+
+func fetchDataFromCloudKit(){
+
+    let query = CKQuery(recordType: "Image", predicate: NSPredicate(value: true))
+        
+        publicDatabase.perform(query, inZoneWith: nil) {(records,error)in
+           
+            if let error = error {
+                print("Fetching image is error...")
+                return
+            }
+            
+            guard let records = records, !records.isEmpty else {
+                print("no records...")
+                return
+            }
+            
+            let randomRecord = records[Int(arc4random_uniform(UInt32(records.count)))]
+            
+            if let imageAsset = randomRecord["image"] as? CKAsset,
+               let imageData = try? Data(contentsOf: imageAsset.fileURL!),
+               let img = UIImage(data: imageData){
+                DispatchQueue.main.async {
+                    self.imageView.image = img
+                }
+            }
+        }
+    }
+
